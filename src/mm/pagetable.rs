@@ -225,8 +225,14 @@ impl PageTable {
             println!("page table {:#x}", self as *const PageTable as usize);
         }
 
-        // 生成缩进字符串
-        let indent = ".".repeat(depth * 2);
+        // 直接生成符合格式要求的缩进字符串
+        let indent = match depth {
+            0 => "",
+            1 => "..",
+            2 => ".. ..",
+            3 => ".. .. ..",
+            _ => panic!("Unsupported depth for pagetable printing"),
+        };
 
         // 遍历所有512个页表项
         for (i, pte) in self.data.iter().enumerate() {
