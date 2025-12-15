@@ -119,7 +119,7 @@ impl ProcData {
             pagetable: None,
         cwd: None,
         trace_mask: 0,
-    }
+        }
     }
 
     /// Set kstack
