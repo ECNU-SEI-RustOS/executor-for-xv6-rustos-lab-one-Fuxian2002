@@ -102,7 +102,7 @@ pub struct ProcData {
     pub pagetable: Option<Box<PageTable>>,
     /// 进程当前工作目录的 inode。
     pub cwd: Option<Inode>,
-    /// 系统调用追踪掩码
+    /// 系统调用追踪掩码，用于控制哪些系统调用会被追踪。
     trace_mask: u32,
 }
 
@@ -117,9 +117,9 @@ impl ProcData {
             open_files: array![_ => None; NFILE],
             tf: ptr::null_mut(),
             pagetable: None,
-            cwd: None,
-            trace_mask: 0,
-        }
+        cwd: None,
+        trace_mask: 0,
+    }
     }
 
     /// Set kstack
@@ -495,13 +495,6 @@ impl Proc {
     /// - 使用了 `unsafe` 获取 TrapFrame 裸指针，假设指针有效且唯一所有权。
     /// - 该函数应在内核上下文且进程排他访问时调用，避免数据竞争。
     /// - 系统调用执行过程中可能包含更底层的 `unsafe`，调用此函数时需确保整体安全环境。
-    // System call names for trace output
-    const SYSCALL_NAMES: [&str; 23] = [
-        "", "fork", "exit", "wait", "pipe", "read", "kill", "exec", "fstat",
-        "chdir", "dup", "getpid", "sbrk", "sleep", "uptime", "open", "write",
-        "mknod", "unlink", "link", "mkdir", "close", "trace"
-    ];
-
     pub fn syscall(&mut self) {
         sstatus::intr_on();
 
@@ -530,24 +523,14 @@ impl Proc {
             19 => self.sys_link(),
             20 => self.sys_mkdir(),
             21 => self.sys_close(),
-            22 => self.sys_trace(),
             _ => {
                 panic!("unknown syscall num: {}", a7);
             }
         };
-        
-        let ret = match sys_result {
+        tf.a0 = match sys_result {
             Ok(ret) => ret,
             Err(()) => -1isize as usize,
         };
-        
-        // Print trace information if the corresponding bit is set in the mask
-        let trace_mask = unsafe { self.data.get_mut().trace_mask };
-        if (trace_mask & (1 << a7)) != 0 {
-            println!("{}: syscall {} -> {}", self.excl.lock().pid, Self::SYSCALL_NAMES[a7 as usize], ret);
-        }
-        
-        tf.a0 = ret;
     }
 
     /// # 功能说明
@@ -710,9 +693,6 @@ impl Proc {
         
         // copy process name
         cdata.name.copy_from_slice(&pdata.name);
-        
-        // inherit trace mask from parent
-        cdata.trace_mask = pdata.trace_mask;
 
         let cpid = cexcl.pid;
 
