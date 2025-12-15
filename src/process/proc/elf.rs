@@ -201,11 +201,15 @@ pub fn load(p: &mut Proc, path: &[u8], argv: &[Option<Box<[u8; MAXARGLEN]>>]) ->
     for i in 0..count {
         pdata.name[i] = path[i+off];
     }
+    // Save the trace mask before updating pagetable
+    let trace_mask = pdata.trace_mask;
     let mut old_pgt = pdata.pagetable.replace(pgt).unwrap();
     let old_size = pdata.sz;
     pdata.sz = proc_size;
     tf.epc = elf.entry as usize;
     tf.sp = stack_pointer;
+    // Restore the trace mask after updating pagetable
+    pdata.trace_mask = trace_mask;
     old_pgt.dealloc_proc_pagetable(old_size);
     
     Ok(argc)
