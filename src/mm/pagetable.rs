@@ -199,6 +199,54 @@ impl PageTable {
         }
     }
 
+    /// # 功能说明
+    /// 打印当前页表及其子页表的内容，以递归方式遍历多级页表结构，
+    /// 展示虚拟页与物理页的映射关系以及页表的层次结构。
+    /// 
+    /// # 参数
+    /// - `depth`：当前递归的层数，用于控制输出的缩进，顶层页表的深度为0。
+    /// 
+    /// # 输出格式
+    /// ```
+    /// page table 0x803fd000
+    /// ..0: pte 0x200fec01 pa 0x803fb000
+    /// .. ..0: pte 0x200ff001 pa 0x803fc000
+    /// .. .. ..0: pte 0x200fe85f pa 0x803fa000
+    /// ```
+    /// 
+    /// # 注意事项
+    /// - 仅打印valid位被设置的页表项
+    /// - 使用".."作为缩进符号，每层缩进两个点
+    /// - 输出格式："{缩进}{索引}: pte {页表项值} pa {物理地址}"
+    pub fn vm_print(&self, depth: usize) {
+        // Print the page table address
+        if depth == 0 {
+            println!("page table {:#x}", self as *const PageTable as usize);
+        }
+
+        // Generate indent based on depth
+        let indent = "..".repeat(depth);
+
+        // Iterate through all 512 page table entries
+        for (i, pte) in self.data.iter().enumerate() {
+            // Skip invalid entries
+            if !pte.is_valid() {
+                continue;
+            }
+
+            // Print the current entry
+            println!("{}{}: pte {:#x} pa {:#x}", 
+                     indent, i, pte.data, pte.as_phys_addr().as_usize());
+
+            // If it's not a leaf entry, recursively print the next level
+            if !pte.is_leaf() {
+                // Convert the PTE to a PageTable pointer and recursively print
+                let next_pagetable = unsafe { &*pte.as_page_table() };
+                next_pagetable.vm_print(depth + 1);
+            }
+        }
+    }
+
     /// Convert the page table to be the usize
     /// that can be written in satp register
     pub fn as_satp(&self) -> usize {
