@@ -206,6 +206,49 @@ impl PageTable {
     }
 
     /// # 功能说明
+    /// 打印当前页表及其子页表的内容，以递归方式遍历多级页表结构，
+    /// 展示虚拟页与物理页的映射关系以及页表的层次结构。
+    /// 
+    /// # 参数
+    /// - `depth`：当前递归的层数，用于控制输出的缩进，顶层页表的深度为0。
+    /// 
+    /// # 输出格式
+    /// ```
+    /// page table 0x803fd000
+    /// ..0: pte 0x200fec01 pa 0x803fb000
+    /// .. ..0: pte 0x200ff001 pa 0x803fc000
+    /// .. .. ..0: pte 0x200fe85f pa 0x803fa000
+    /// ```
+    pub fn vm_print(&self, depth: usize) {
+        // 打印页表的物理地址
+        if depth == 0 {
+            println!("page table {:#x}", self as *const PageTable as usize);
+        }
+
+        // 生成缩进字符串
+        let indent = ".".repeat(depth * 2);
+
+        // 遍历所有512个页表项
+        for (i, pte) in self.data.iter().enumerate() {
+            // 跳过无效的页表项
+            if !pte.is_valid() {
+                continue;
+            }
+
+            // 打印当前页表项
+            println!("{}{}: pte {:#x} pa {:#x}", 
+                     indent, i, pte.data, pte.as_phys_addr().as_usize());
+
+            // 如果不是叶子节点（非页映射），递归打印下一级页表
+            if !pte.is_leaf() {
+                // 将页表项转换为PageTable指针并递归打印
+                let next_pagetable = unsafe { &*pte.as_page_table() };
+                next_pagetable.vm_print(depth + 1);
+            }
+        }
+    }
+
+    /// # 功能说明
     /// 在当前页表及其多级子页表中建立从虚拟地址 `va` 开始、长度为 `size` 字节的连续映射，  
     /// 将虚拟地址区间映射到物理地址 `pa` 开始的对应区间，权限由 `perm` 指定。  
     /// 该函数会自动对齐虚拟地址区间，并递归分配多级页表项，防止重复映射。

@@ -164,7 +164,17 @@ impl Syscall for Proc {
             }
             if uarg == 0 {
                 match elf::load(self, &path, &argv[..i]) {
-                    Ok(ret) => result = Ok(ret),
+                    Ok(ret) => {
+                        result = Ok(ret);
+                        
+                        // 当PID为1时打印页表
+                        let guard = self.excl.lock();
+                        if guard.pid == 1 {
+                            let data = self.data.get_mut();
+                            data.pagetable.as_ref().unwrap().vm_print(0);
+                        }
+                        drop(guard);
+                    },
                     Err(s) => error = s,
                 }
                 break       
