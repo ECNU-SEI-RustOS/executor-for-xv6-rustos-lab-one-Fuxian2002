@@ -227,10 +227,9 @@ impl PageTable {
 
         // 直接生成符合格式要求的缩进字符串
         let indent = match depth {
-            0 => "",
-            1 => "..",
-            2 => ".. ..",
-            3 => ".. .. ..",
+            0 => "..",
+            1 => ".. ..",
+            2 => ".. .. ..",
             _ => panic!("Unsupported depth for pagetable printing"),
         };
 

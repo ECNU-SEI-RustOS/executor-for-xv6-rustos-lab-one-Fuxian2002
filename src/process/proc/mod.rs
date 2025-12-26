@@ -545,7 +545,7 @@ impl Proc {
         // 打印trace信息如果对应的位在mask中被设置
         let trace_mask = unsafe { self.data.get_mut().trace_mask };
         if (trace_mask & (1 << a7)) != 0 {
-            println!("{}: syscall {} -> {}", self.excl.lock().pid, Self::SYSCALL_NAMES[a7 as usize], ret);
+            println!("{}: syscall {} -> {}", self.excl.lock().pid, Self::SYSCALL_NAMES[a7 as usize], ret as isize);
         }
         
         tf.a0 = ret;
